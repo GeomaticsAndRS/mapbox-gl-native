@@ -2,6 +2,9 @@ apply plugin: 'com.android.library'
 apply plugin: "com.jaredsburrows.license"
 
 dependencies {
+    implementation(project(':MapboxGLAndroidHTTP'))
+    api(project(':MapboxGLAndroidHTTPBase'))
+
     api (dependenciesList.mapboxAndroidTelemetry) {
         exclude group: 'com.android.support', module: 'appcompat-v7'
     }
@@ -13,7 +16,6 @@ dependencies {
     implementation dependenciesList.supportFragmentV4
     implementation dependenciesList.supportUtilV4
     implementation dependenciesList.timber
-    implementation dependenciesList.okhttp3
     testImplementation dependenciesList.junit
     testImplementation dependenciesList.mockito
     testImplementation dependenciesList.robolectric

@@ -16,7 +16,7 @@ public class HttpRequestUtil {
    * @param enabled True will enable logging, false will disable
    */
   public static void setLogEnabled(boolean enabled) {
-    OkHttpRequest.enableLog(enabled);
+    //OkHttpRequest.enableLog(enabled);
   }
 
   /**
@@ -31,7 +31,7 @@ public class HttpRequestUtil {
    * @param enabled True will print urls, false will disable
    */
   public static void setPrintRequestUrlOnFailure(boolean enabled) {
-    OkHttpRequest.enablePrintRequestUrlOnFailure(enabled);
+    //OkHttpRequest.enablePrintRequestUrlOnFailure(enabled);
   }
 
   /**
@@ -40,7 +40,7 @@ public class HttpRequestUtil {
    * @param client the OkHttpClient
    */
   public static void setOkHttpClient(OkHttpClient client) {
-    OkHttpRequest.setOkHttpClient(client);
+   // OkHttpRequest.setOkHttpClient(client);
   }
 
 }

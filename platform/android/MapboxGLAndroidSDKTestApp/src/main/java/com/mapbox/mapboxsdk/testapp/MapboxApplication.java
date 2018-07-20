@@ -5,7 +5,6 @@ import android.os.StrictMode;
 import android.text.TextUtils;
 
 import com.mapbox.mapboxsdk.Mapbox;
-import com.mapbox.mapboxsdk.http.HttpRequest;
 import com.mapbox.mapboxsdk.testapp.utils.IonHttpRequest;
 import com.mapbox.mapboxsdk.testapp.utils.TokenUtils;
 import com.squareup.leakcanary.LeakCanary;
@@ -34,14 +33,9 @@ public class MapboxApplication extends Application {
     if (!initializeLeakCanary()) {
       return;
     }
-    initializeHttpClient();
     initializeLogger();
     initializeStrictMode();
     initializeMapbox();
-  }
-
-  private void initializeHttpClient() {
-    HttpRequest.setHttpRequest(new IonHttpRequest(this));
   }
 
   private boolean initializeLeakCanary() {

@@ -1,24 +1,9 @@
 package com.mapbox.mapboxsdk.http;
 
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.os.Build;
 import android.support.annotation.NonNull;
-import android.support.v4.util.LongSparseArray;
 import android.text.TextUtils;
 import android.util.Log;
-import com.mapbox.android.telemetry.TelemetryUtils;
-import com.mapbox.mapboxsdk.BuildConfig;
-import com.mapbox.mapboxsdk.Mapbox;
-import com.mapbox.mapboxsdk.constants.MapboxConstants;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Dispatcher;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
+import okhttp3.*;
 import timber.log.Timber;
 
 import javax.net.ssl.SSLException;
@@ -28,27 +13,31 @@ import java.net.NoRouteToHostException;
 import java.net.ProtocolException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
-public class OkHttpRequest extends HttpRequest {
+public class HttpRequestImpl extends HttpRequest {
 
-  private static final LongSparseArray<Call> calls = new LongSparseArray<>();
-  private static final String userAgentString =  TelemetryUtils.toHumanReadableAscii(
-    String.format("%s %s (%s) Android/%s (%s)",
-      getApplicationIdentifier(),
-      BuildConfig.MAPBOX_VERSION_STRING,
-      BuildConfig.GIT_REVISION_SHORT,
-      Build.VERSION.SDK_INT,
-      Build.CPU_ABI)
-  );
+  private static final String userAgentString = "test";
+
+  private Call call;
+
+// TODO
+//    TelemetryUtils.toHumanReadableAscii(
+//    String.format("%s %s (%s) Android/%s (%s)",
+//      getApplicationIdentifier(),
+//      BuildConfig.MAPBOX_VERSION_STRING,
+//      BuildConfig.GIT_REVISION_SHORT,
+//      Build.VERSION.SDK_INT,
+//      Build.CPU_ABI)
+//  );
 
   private static OkHttpClient client = new OkHttpClient.Builder().dispatcher(getDispatcher()).build();
   private static boolean logEnabled = true;
   private static boolean logRequestUrl = false;
 
   @Override
-  public void executeRequest(NativeHttpRequest httpRequest, long nativePtr, String resourceUrl,
+  public void executeRequest(HttpRequestResponder httpRequest, long nativePtr, String resourceUrl,
                              String etag, String modified) {
-    Call call = null;
     OkHttpCallback callback = new OkHttpCallback(httpRequest);
     try {
       HttpUrl httpUrl = HttpUrl.parse(resourceUrl);
@@ -56,9 +45,12 @@ public class OkHttpRequest extends HttpRequest {
         log(Log.ERROR, String.format("[HTTP] Unable to parse resourceUrl %s", resourceUrl));
       }
 
-      final String host = httpUrl.host().toLowerCase(MapboxConstants.MAPBOX_LOCALE);
+      // TODO use MapboConstants LOCALE
+      final String host = httpUrl.host().toLowerCase(Locale.US);
       // Don't try a request to remote server if we aren't connected
-      if (!Mapbox.isConnected() && !host.equals("127.0.0.1") && !host.equals("localhost")) {
+
+      // TODO don't execute when not connected `!Mapbox.isConnected() &&`
+      if (!host.equals("127.0.0.1") && !host.equals("localhost")) {
         throw new NoRouteToHostException("No Internet connection available.");
       }
 
@@ -74,7 +66,8 @@ public class OkHttpRequest extends HttpRequest {
 
       Request.Builder builder = new Request.Builder()
         .url(resourceUrl)
-        .tag(resourceUrl.toLowerCase(MapboxConstants.MAPBOX_LOCALE))
+        // TODO use MapboConstants LOCALE
+        .tag(resourceUrl.toLowerCase(Locale.US))
         .addHeader("User-Agent", userAgentString);
       if (etag.length() > 0) {
         builder = builder.addHeader("If-None-Match", etag);
@@ -83,27 +76,17 @@ public class OkHttpRequest extends HttpRequest {
       }
       Request request = builder.build();
       call = client.newCall(request);
-
-      synchronized (calls) {
-        calls.put(nativePtr, call);
-      }
-
       call.enqueue(callback);
-      Timber.e("Requesting resource with size %s for %s", calls.size(), call.hashCode());
     } catch (Exception exception) {
       callback.handleFailure(call, exception);
     }
   }
 
   @Override
-  public void cancelRequest(long nativePtr) {
-    synchronized (calls) {
-      Call call = calls.get(nativePtr);
-      // call can be null if the constructor gets aborted (e.g, under a NoRouteToHostException).
-      if (call != null) {
-        call.cancel();
-        calls.delete(nativePtr);
-      }
+  public void cancelRequest() {
+    // call can be null if the constructor gets aborted (e.g, under a NoRouteToHostException).
+    if (call != null) {
+      call.cancel();
     }
   }
 
@@ -116,14 +99,14 @@ public class OkHttpRequest extends HttpRequest {
   }
 
   public static void setOkHttpClient(OkHttpClient okHttpClient) {
-    OkHttpRequest.client = okHttpClient;
+    HttpRequestImpl.client = okHttpClient;
   }
 
   private static class OkHttpCallback implements Callback {
 
-    private NativeHttpRequest httpRequest;
+    private HttpRequestResponder httpRequest;
 
-    OkHttpCallback(NativeHttpRequest httpRequest) {
+    OkHttpCallback(HttpRequestResponder httpRequest) {
       this.httpRequest = httpRequest;
     }
 
@@ -141,8 +124,6 @@ public class OkHttpRequest extends HttpRequest {
         String message = !TextUtils.isEmpty(response.message()) ? response.message() : "No additional information";
         log(Log.DEBUG, String.format("[HTTP] Request with response code = %s: %s", response.code(), message));
       }
-
-      removeCall(call);
 
       ResponseBody responseBody = response.body();
       if (responseBody == null) {
@@ -179,9 +160,6 @@ public class OkHttpRequest extends HttpRequest {
         String requestUrl = call.request().url().toString();
         logFailure(type, errorMessage, requestUrl);
       }
-
-      removeCall(call);
-      Timber.e("Handle Failure with size %s for %s", calls.size(), call.hashCode());
       httpRequest.handleFailure(type, errorMessage);
     }
 
@@ -205,29 +183,18 @@ public class OkHttpRequest extends HttpRequest {
       }
       return PERMANENT_ERROR;
     }
-
-    private void removeCall(Call call) {
-      synchronized (calls) {
-        Call currentCall;
-        for (int i = 0; i < calls.size(); i++) {
-          currentCall = calls.valueAt(i);
-          if (call.equals(currentCall)) {
-            calls.delete(calls.keyAt(i));
-            return;
-          }
-        }
-      }
-    }
   }
 
   private static String getApplicationIdentifier() {
-    try {
-      Context context = Mapbox.getApplicationContext();
-      PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-      return String.format("%s/%s (%s)", context.getPackageName(), packageInfo.versionName, packageInfo.versionCode);
-    } catch (Exception exception) {
-      return "";
-    }
+    // TODO correct app identifier
+    return "test";
+//    try {
+//      Context context = Mapbox.getApplicationContext();
+//      PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+//      return String.format("%s/%s (%s)", context.getPackageName(), packageInfo.versionName, packageInfo.versionCode);
+//    } catch (Exception exception) {
+//      return "";
+//    }
   }
 
   private static Dispatcher getDispatcher() {

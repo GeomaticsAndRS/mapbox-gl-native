@@ -55,8 +55,8 @@ android {
 dependencies {
     implementation dependenciesList.kotlinLib
 
-    api(project(':MapboxGLAndroidSDK')) {
-        exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+    implementation(project(':MapboxGLAndroidSDK')) {
+      exclude module: 'MapboxGLAndroidHTTP'
     }
 
     implementation(dependenciesList.mapboxJavaTurf) {

@@ -2,7 +2,9 @@ package com.mapbox.mapboxsdk.http;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-public class NativeHttpRequest {
+public class NativeHttpRequest implements HttpRequestResponder {
+
+  private final HttpRequestImpl httpRequestImpl = new HttpRequestImpl();
 
   // Reentrancy is not needed, but "Lock" is an abstract class.
   private ReentrantLock lock = new ReentrantLock();
@@ -16,11 +18,11 @@ public class NativeHttpRequest {
       executeLocalRequest(resourceUrl);
       return;
     }
-    HttpRequest.execute(this, nativePtr, resourceUrl, etag, modified);
+    httpRequestImpl.executeRequest(this, nativePtr, resourceUrl, etag, modified);
   }
 
   public void cancel() {
-    HttpRequest.cancel(nativePtr);
+    httpRequestImpl.cancelRequest();
 
     // TODO: We need a lock here because we can try
     // to cancel at the same time the request is getting
