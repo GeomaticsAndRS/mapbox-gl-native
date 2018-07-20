@@ -36,8 +36,8 @@ struct Converter<PropertyValue<T>> {
             } else if (!isZoomConstant(**expression)) {
                 return { CameraFunction<T>(std::move(*expression)) };
             } else {
-                auto literal = dynamic_cast<Literal*>(expression->get());
-                assert(literal);
+                assert((*expression)->getSubclass() == ExpressionSubclass::Literal);
+                auto literal = static_cast<Literal*>(expression->get());
                 optional<T> constant = fromExpressionValue<T>(literal->getValue());
                 if (!constant) {
                     return {};

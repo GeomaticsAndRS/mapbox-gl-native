@@ -32,19 +32,21 @@ namespace style {
 namespace expression {
 
 bool isConstant(const Expression& expression) {
-    if (auto varExpression = dynamic_cast<const Var*>(&expression)) {
+    if (expression.getSubclass() == ExpressionSubclass::Var) {
+        auto varExpression = static_cast<const Var*>(&expression);
         return isConstant(*varExpression->getBoundExpression());
     }
 
-    if (auto compound = dynamic_cast<const CompoundExpressionBase*>(&expression)) {
+    if (expression.getSubclass() == ExpressionSubclass::CompoundExpression) {
+        auto compound = static_cast<const CompoundExpressionBase*>(&expression);
         if (compound->getName() == "error") {
             return false;
         }
     }
 
-    bool isTypeAnnotation = dynamic_cast<const Coercion*>(&expression) ||
-        dynamic_cast<const Assertion*>(&expression) ||
-        dynamic_cast<const ArrayAssertion*>(&expression);
+    bool isTypeAnnotation = expression.getSubclass() == ExpressionSubclass::Coercion ||
+        expression.getSubclass() == ExpressionSubclass::Assertion ||
+        expression.getSubclass() == ExpressionSubclass::ArrayAssertion;
     
     bool childrenConstant = true;
     expression.eachChild([&](const Expression& child) {
@@ -58,7 +60,7 @@ bool isConstant(const Expression& expression) {
         if (isTypeAnnotation) {
             childrenConstant = childrenConstant && isConstant(child);
         } else {
-            childrenConstant = childrenConstant && dynamic_cast<const Literal*>(&child);
+            childrenConstant = childrenConstant && child.getSubclass() == ExpressionSubclass::Literal;
         }
     });
     if (!childrenConstant) {
@@ -186,7 +188,7 @@ ParseResult ParsingContext::parse(const Convertible& value, TypeAnnotationOption
     // If an expression's arguments are all constant, we can evaluate
     // it immediately and replace it with a literal value in the
     // parsed result.
-    if (!dynamic_cast<Literal *>(parsed->get()) && isConstant(**parsed)) {
+    if ((*parsed)->getSubclass() != ExpressionSubclass::Literal && isConstant(**parsed)) {
         EvaluationContext params(nullptr);
         EvaluationResult evaluated((*parsed)->evaluate(params));
         if (!evaluated) {

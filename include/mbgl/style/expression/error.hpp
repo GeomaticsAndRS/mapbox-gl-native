@@ -11,13 +11,13 @@ namespace expression {
 class Error : public Expression {
 public:
     Error(std::string message_) 
-        : Expression(type::Error),
+        : Expression(ExpressionSubclass::Error, type::Error),
           message(std::move(message_)) {}
 
     void eachChild(const std::function<void(const Expression&)>&) const override {}
 
     bool operator==(const Expression& e) const override {
-        return dynamic_cast<const Error*>(&e);
+        return e.getSubclass() == ExpressionSubclass::Error;
     }
 
     EvaluationResult evaluate(const EvaluationContext&) const override {

@@ -62,7 +62,7 @@ struct SignatureBase {
 class CompoundExpressionBase : public Expression {
 public:
     CompoundExpressionBase(std::string name_, const detail::SignatureBase& signature) :
-        Expression(signature.result),
+        Expression(ExpressionSubclass::CompoundExpression, signature.result),
         name(std::move(name_)),
         params(signature.params)
     {}
@@ -108,7 +108,8 @@ public:
     }
 
     bool operator==(const Expression& e) const override {
-        if (auto rhs = dynamic_cast<const CompoundExpression*>(&e)) {
+        if (e.getSubclass() == ExpressionSubclass::CompoundExpression) {
+            auto rhs = static_cast<const CompoundExpression*>(&e);
             return getName() == rhs->getName() && Expression::childrenEqual(args, rhs->args);
         }
         return false;
