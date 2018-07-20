@@ -1,6 +1,6 @@
 # All dependencies in a single separate file so its checksum can be used in a CI cache key name
 
-mason_use(geometry VERSION 0.9.2 HEADER_ONLY)
+mason_use(geometry VERSION 0.9.3 HEADER_ONLY)
 mason_use(variant VERSION 1.1.4 HEADER_ONLY)
 mason_use(unique_resource VERSION cba309e HEADER_ONLY)
 mason_use(rapidjson VERSION 1.1.0 HEADER_ONLY)
